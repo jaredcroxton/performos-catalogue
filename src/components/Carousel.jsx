@@ -3,7 +3,11 @@ import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from
 
 const getCardSize = () => {
   const vw = window.innerWidth;
-  if (vw < 600) return { width: 280, height: 380 };
+  const vh = window.innerHeight;
+  if (vw < 600) return {
+    width: Math.min(vw - 44, 360),
+    height: Math.min(Math.floor(vh * 0.64), 520),
+  };
   if (vw < 900) return { width: 360, height: 470 };
   return { width: 440, height: 580 };
 };
@@ -27,7 +31,9 @@ function getCardStyle(offset, cardWidth) {
     return { opacity: 0, pointerEvents: "none", zIndex: 0 };
   }
 
-  const x = sgn * (abs * cardWidth * 0.82);
+  // Tighter spread on mobile so side cards peek in visibly
+  const spread = cardWidth < 360 ? 0.66 : 0.82;
+  const x = sgn * (abs * cardWidth * spread);
   const scale = Math.max(0.18, 1 - abs * 0.46);
   const rotY = -sgn * Math.min(abs * 54, 74);
   const opacity = Math.max(0, 1 - abs * 0.44);
@@ -42,7 +48,7 @@ function getCardStyle(offset, cardWidth) {
   };
 }
 
-function ProductCard({ product, isActive, onDemoRequest }) {
+function ProductCard({ product, isActive, onDemoRequest, cardWidth }) {
   const isDark = product.isDark;
   const textColor = isDark ? "#ffffff" : "#0a0a0a";
   const textMuted = isDark ? "rgba(255,255,255,0.7)" : "rgba(10,10,10,0.65)";
@@ -50,37 +56,39 @@ function ProductCard({ product, isActive, onDemoRequest }) {
   const borderColor = isDark ? "rgba(255,255,255,0.18)" : "rgba(10,10,10,0.15)";
   const dividerColor = isDark ? "rgba(255,255,255,0.12)" : "rgba(10,10,10,0.12)";
 
-  // Mouse tilt physics
+  // Responsive sizing based on card width
+  const sm = cardWidth < 360;
+  const nameSz1 = sm ? 36 : 56;
+  const nameSz2 = sm ? 30 : 48;
+  const taglineSz = sm ? 13 : 16;
+  const descSz = sm ? 11.5 : 14;
+  const statusSz = sm ? 9.5 : 11.5;
+  const urlSz = sm ? 9 : 10.5;
+  const pad = sm ? "20px 20px 18px" : "30px 32px 28px";
+  const headerGap = sm ? 18 : 28;
+  const nameGap = sm ? 12 : 22;
+  const divGap = sm ? "12px 0 10px" : "20px 0 18px";
+  const watermarkSz = sm ? 88 : 148;
+
+  // Mouse tilt — desktop only
   const x = useMotionValue(0);
   const y = useMotionValue(0);
-
   const mouseXSpring = useSpring(x, { stiffness: 300, damping: 30 });
   const mouseYSpring = useSpring(y, { stiffness: 300, damping: 30 });
-
   const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["12deg", "-12deg"]);
   const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-12deg", "12deg"]);
 
   const handlePointerMove = (e) => {
-    if (!isActive) return;
+    if (!isActive || sm) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    const xPct = mouseX / width - 0.5;
-    const yPct = mouseY / height - 0.5;
-    x.set(xPct);
-    y.set(yPct);
+    x.set((e.clientX - rect.left) / rect.width - 0.5);
+    y.set((e.clientY - rect.top) / rect.height - 0.5);
   };
-
-  const handlePointerLeave = () => {
-    x.set(0);
-    y.set(0);
-  };
+  const handlePointerLeave = () => { x.set(0); y.set(0); };
 
   const textVariants = {
     inactive: { y: 15, opacity: 0 },
-    active: { y: 0, opacity: 1, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } }
+    active: { y: 0, opacity: 1, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } },
   };
 
   return (
@@ -88,22 +96,18 @@ function ProductCard({ product, isActive, onDemoRequest }) {
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
       style={{
-        width: "100%",
-        height: "100%",
-        borderRadius: 24,
-        overflow: "hidden",
+        width: "100%", height: "100%",
+        borderRadius: 24, overflow: "hidden",
         background: product.cardBg,
         backdropFilter: "blur(40px) saturate(1.5)",
         WebkitBackdropFilter: "blur(40px) saturate(1.5)",
         border: `1px solid ${borderColor}`,
         boxShadow: `inset 0 1px 1px rgba(255,255,255,0.15), 0 0 60px ${product.glowColor}25, 0 24px 80px rgba(0,0,0,0.6)`,
-        display: "flex",
-        flexDirection: "column",
-        padding: "30px 32px 28px",
-        position: "relative",
-        rotateX,
-        rotateY,
-        transformStyle: "preserve-3d"
+        display: "flex", flexDirection: "column",
+        padding: pad, position: "relative",
+        rotateX: sm ? 0 : rotateX,
+        rotateY: sm ? 0 : rotateY,
+        transformStyle: "preserve-3d",
       }}
     >
       {/* Top sheen */}
@@ -113,11 +117,11 @@ function ProductCard({ product, isActive, onDemoRequest }) {
         pointerEvents: "none",
       }} />
 
-      {/* Large number watermark */}
+      {/* Number watermark */}
       <div style={{
-        position: "absolute", bottom: 20, right: 28,
+        position: "absolute", bottom: 16, right: sm ? 16 : 28,
         fontFamily: "'JetBrains Mono', monospace",
-        fontSize: 148, fontWeight: 700, lineHeight: 1,
+        fontSize: watermarkSz, fontWeight: 700, lineHeight: 1,
         color: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.06)",
         pointerEvents: "none", userSelect: "none", letterSpacing: "-5px",
         transform: "translateZ(-20px)",
@@ -125,79 +129,52 @@ function ProductCard({ product, isActive, onDemoRequest }) {
         {product.number.split(" / ")[0]}
       </div>
 
-      {/* Decorative glow ring */}
+      {/* Decorative glow rings */}
       <div style={{
         position: "absolute", right: -55, top: "22%",
-        width: 230, height: 230, borderRadius: "50%",
+        width: sm ? 160 : 230, height: sm ? 160 : 230, borderRadius: "50%",
         border: `1px solid ${product.glowColor}40`,
         boxShadow: `0 0 120px ${product.glowColor}30`,
         pointerEvents: "none",
         animation: "pulse-ring 4s ease-in-out infinite",
-        transformOrigin: "center center",
       }} />
-
-      {/* Second decorative ring */}
       <div style={{
         position: "absolute", right: -20, top: "18%",
-        width: 130, height: 130, borderRadius: "50%",
+        width: sm ? 90 : 130, height: sm ? 90 : 130, borderRadius: "50%",
         border: `1px solid ${product.glowColor}30`,
         pointerEvents: "none",
         animation: "pulse-ring-reverse 3s ease-in-out infinite",
-        transformOrigin: "center center",
       }} />
 
-      {/* Demo Button for Pocket Customer */}
-      {product.name === "Pocket Customer" && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onDemoRequest(product); }}
-          style={{
-            marginTop: 12,
-            padding: "8px 16px",
-            background: "#d4ff3b",
-            color: "#0a0a0a",
-            border: "none",
-            borderRadius: 4,
-            cursor: "pointer",
-            fontFamily: "'JetBrains Mono', monospace",
-            fontWeight: 600,
-            fontSize: 12,
-            alignSelf: "flex-start",
-          }}
-        >
-          Try it Live
-        </button>
-      )}
-
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28, zIndex: 1, transform: "translateZ(10px)" }}>
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style={{ animation: "float-icon 3s ease-in-out infinite" }}>
+      {/* Header: icon + category */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: headerGap, zIndex: 1 }}>
+        <svg width={sm ? 24 : 32} height={sm ? 24 : 32} viewBox="0 0 32 32" fill="none">
           <circle cx="16" cy="16" r="15" fill={isDark ? "rgba(255,255,255,0.12)" : "rgba(10,10,10,0.88)"} />
           <circle cx="16" cy="16" r="9" fill={product.glowColor} />
           <circle cx="16" cy="16" r="4" fill={isDark ? "rgba(10,10,10,0.8)" : "rgba(255,255,255,0.8)"} />
         </svg>
         <span style={{
-          fontFamily: "'JetBrains Mono', monospace", fontSize: 10,
-          letterSpacing: "1.8px", textTransform: "uppercase", color: textFaint,
+          fontFamily: "'JetBrains Mono', monospace", fontSize: 9,
+          letterSpacing: "1.6px", textTransform: "uppercase", color: textFaint,
         }}>
           {product.number}
         </span>
       </div>
 
-      {/* Staggered Animated Content */}
+      {/* Product name */}
       <motion.div
         initial="inactive"
         animate={isActive ? "active" : "inactive"}
-        variants={{ active: { transition: { staggerChildren: 0.1 } }, inactive: {} }}
-        style={{ flex: 1, display: "flex", flexDirection: "column", zIndex: 1, transform: "translateZ(30px)" }}
+        variants={{ active: { transition: { staggerChildren: 0.08 } }, inactive: {} }}
+        style={{ flex: 1, display: "flex", flexDirection: "column", zIndex: 1 }}
       >
-        {/* Product name */}
-        <div style={{ marginBottom: 22, flex: "0 0 auto" }}>
+        <div style={{ marginBottom: nameGap, flex: "0 0 auto" }}>
           {product.name.split(" ").map((word, i) => (
             <motion.div key={i} variants={textVariants} style={{
               fontFamily: "'Instrument Serif', Georgia, serif",
-              fontSize: i === 0 ? 56 : 48,
+              fontSize: i === 0 ? nameSz1 : nameSz2,
               lineHeight: 1.0, letterSpacing: "-1.5px",
               color: i === 0 ? textColor : isDark ? "rgba(255,255,255,0.8)" : "rgba(10,10,10,0.75)",
-              textShadow: i === 0 && isDark ? "0 2px 12px rgba(0,0,0,0.4)" : "none",
               display: "block",
             }}>
               {word}
@@ -207,9 +184,9 @@ function ProductCard({ product, isActive, onDemoRequest }) {
 
         {/* Tagline */}
         <motion.p variants={textVariants} style={{
-          margin: "0 0 14px",
+          margin: `0 0 ${sm ? 10 : 14}px`,
           fontFamily: "'Inter', system-ui, sans-serif",
-          fontSize: 16, fontWeight: 600, lineHeight: 1.45, color: textColor,
+          fontSize: taglineSz, fontWeight: 600, lineHeight: 1.45, color: textColor,
         }}>
           {product.tagline}
         </motion.p>
@@ -218,42 +195,58 @@ function ProductCard({ product, isActive, onDemoRequest }) {
         <motion.p variants={textVariants} style={{
           margin: 0,
           fontFamily: "'Inter', system-ui, sans-serif",
-          fontSize: 14, lineHeight: 1.72, color: textMuted, flex: "1 1 auto",
+          fontSize: descSz, lineHeight: 1.7, color: textMuted, flex: "1 1 auto",
         }}>
           {product.description}
         </motion.p>
       </motion.div>
 
       {/* Divider */}
-      <div style={{ height: 1, background: dividerColor, margin: "20px 0 18px", zIndex: 1 }} />
+      <div style={{ height: 1, background: dividerColor, margin: divGap, zIndex: 1 }} />
 
       {/* Footer */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, zIndex: 1, transform: "translateZ(10px)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {product.status === "Active" && (
-            <span className="status-dot" style={{
-              width: 8, height: 8, borderRadius: "50%",
-              background: product.glowColor, boxShadow: `0 0 12px ${product.glowColor}`,
-              display: "inline-block", flexShrink: 0,
-            }} />
+      <div style={{ display: "flex", flexDirection: "column", gap: sm ? 6 : 8, zIndex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+            {product.status === "Active" && (
+              <span className="status-dot" style={{
+                width: sm ? 6 : 8, height: sm ? 6 : 8, borderRadius: "50%",
+                background: product.glowColor, boxShadow: `0 0 10px ${product.glowColor}`,
+                display: "inline-block", flexShrink: 0,
+              }} />
+            )}
+            <span style={{
+              fontFamily: "'JetBrains Mono', monospace", fontSize: statusSz,
+              letterSpacing: "1.6px", textTransform: "uppercase", color: textMuted, fontWeight: 600,
+            }}>
+              {product.status}
+            </span>
+          </div>
+          {/* Try it Live — in footer so it never crowds the title */}
+          {product.name === "Pocket Customer" && (
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); onDemoRequest(product); }}
+              style={{
+                padding: sm ? "4px 10px" : "5px 12px",
+                background: "#d4ff3b", color: "#0a0a0a",
+                border: "none", borderRadius: 4, cursor: "pointer",
+                fontFamily: "'JetBrains Mono', monospace",
+                fontWeight: 700, fontSize: sm ? 9 : 11,
+                letterSpacing: "0.5px", flexShrink: 0,
+              }}
+            >
+              Try it Live
+            </button>
           )}
-          <span style={{
-            fontFamily: "'JetBrains Mono', monospace", fontSize: 11.5,
-            letterSpacing: "1.8px", textTransform: "uppercase", color: textMuted,
-            fontWeight: 600,
-          }}>
-            {product.status}
-          </span>
         </div>
-        <a 
-          href={`https://${product.url}`} 
-          target="_blank" 
-          rel="noopener noreferrer"
+        <a
+          href={`https://${product.url}`}
+          target="_blank" rel="noopener noreferrer"
           onPointerDown={(e) => e.stopPropagation()}
           style={{
-            fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5,
-            letterSpacing: "0.6px", color: textMuted, textDecoration: "none",
-            pointerEvents: "auto",
+            fontFamily: "'JetBrains Mono', monospace", fontSize: urlSz,
+            letterSpacing: "0.5px", color: textFaint, textDecoration: "none",
           }}
           className="custom-link"
         >
@@ -412,7 +405,7 @@ export function Carousel({ products, onActiveChange, onDemoRequest }) {
             className="card-wrapper absolute inset-0"
             style={{ transformStyle: "preserve-3d" }}
           >
-            <ProductCard product={product} isActive={i === activeIdx} onDemoRequest={onDemoRequest} />
+            <ProductCard product={product} isActive={i === activeIdx} onDemoRequest={onDemoRequest} cardWidth={cardSize.width} />
           </div>
         ))}
       </div>
