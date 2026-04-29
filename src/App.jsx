@@ -102,52 +102,55 @@ export default function App() {
 
       {/* Nav */}
       <nav
-        className="absolute top-0 left-0 right-0 flex items-center justify-between px-10"
+        className="absolute top-0 left-0 right-0 flex items-center justify-between"
         style={{
-          height: 80,
+          height: 64,
           zIndex: 10,
+          padding: "0 20px",
           background: "linear-gradient(to bottom, rgba(5,9,20,0.9) 0%, rgba(5,9,20,0) 100%)",
         }}
       >
         <span
           style={{
             fontFamily: "'Instrument Serif', Georgia, serif",
-            fontSize: 24,
+            fontSize: 22,
             letterSpacing: "-0.3px",
             color: "rgba(255,255,255,0.95)",
             textShadow: "0 2px 12px rgba(0,0,0,0.8)",
+            flexShrink: 0,
           }}
         >
           Perform<em style={{ fontStyle: "italic", color: "rgba(255,255,255,0.6)" }}>OS</em>
         </span>
-        <span
+        <span className="nav-catalogue"
           style={{
             fontFamily: "'JetBrains Mono', monospace",
-            fontSize: 11,
+            fontSize: 10,
             fontWeight: 500,
-            letterSpacing: "2.0px",
+            letterSpacing: "1.8px",
             textTransform: "uppercase",
-            color: "rgba(255,255,255,0.85)",
+            color: "rgba(255,255,255,0.7)",
             textShadow: "0 2px 12px rgba(0,0,0,0.8)",
           }}
         >
           The Catalogue · Vol. 01 · 2026
         </span>
-        {/* Refresh button */}
         <button
           onClick={() => window.location.reload()}
           style={{
-            marginLeft: "auto",
-            background: "rgba(255,255,255,0.1)",
-            color: "#fff",
-            border: "1px solid #d4ff3b",
+            flexShrink: 0,
+            background: "rgba(255,255,255,0.08)",
+            color: "rgba(255,255,255,0.7)",
+            border: "1px solid rgba(212,255,59,0.5)",
             borderRadius: 4,
-            padding: "4px 8px",
+            padding: "3px 8px",
             cursor: "pointer",
             fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 10,
+            letterSpacing: "0.5px",
           }}
         >
-          Refresh
+          ↺
         </button>
       </nav>
 

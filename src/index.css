@@ -103,3 +103,15 @@ a, button, .cursor-drag-area {
 .status-dot {
   animation: pulse-glow 2s ease-in-out infinite;
 }
+
+@media (max-width: 599px) {
+  .nav-catalogue {
+    display: none;
+  }
+  body {
+    cursor: auto;
+  }
+  .custom-cursor {
+    display: none;
+  }
+}

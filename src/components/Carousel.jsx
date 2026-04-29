@@ -1,15 +1,16 @@
 import { useRef, useEffect, useCallback, useState } from "react";
 import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from "framer-motion";
 
-// Responsive card dimensions – will be updated on window resize
-// We'll calculate size based on viewport width
 const getCardSize = () => {
   const vw = window.innerWidth;
   if (vw < 600) return { width: 280, height: 380 };
   if (vw < 900) return { width: 360, height: 470 };
   return { width: 440, height: 580 };
 };
-const PIXELS_PER_CARD = 700;
+
+// Drag sensitivity: how many pixels of swipe = 1 card. Scales with card width.
+// On mobile (280px card) → ~154px per card, very responsive.
+const getPixelsPerCard = (cardWidth) => cardWidth * 0.55;
 
 function getCircularOffset(index, position, N) {
   let offset = index - position;
@@ -18,7 +19,7 @@ function getCircularOffset(index, position, N) {
   return offset;
 }
 
-function getCardStyle(offset) {
+function getCardStyle(offset, cardWidth) {
   const abs = Math.abs(offset);
   const sgn = Math.sign(offset) || 0;
 
@@ -26,7 +27,7 @@ function getCardStyle(offset) {
     return { opacity: 0, pointerEvents: "none", zIndex: 0 };
   }
 
-  const x = sgn * (abs * 355);
+  const x = sgn * (abs * cardWidth * 0.82);
   const scale = Math.max(0.18, 1 - abs * 0.46);
   const rotY = -sgn * Math.min(abs * 54, 74);
   const opacity = Math.max(0, 1 - abs * 0.44);
@@ -306,8 +307,13 @@ export function Carousel({ products, onActiveChange, onDemoRequest }) {
   const isDragging = useRef(false);
   // responsive card size state
   const [cardSize, setCardSize] = useState(getCardSize());
+  const cardSizeRef = useRef(getCardSize());
   useEffect(() => {
-    const handleResize = () => setCardSize(getCardSize());
+    const handleResize = () => {
+      const s = getCardSize();
+      setCardSize(s);
+      cardSizeRef.current = s;
+    };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -325,7 +331,7 @@ export function Carousel({ products, onActiveChange, onDemoRequest }) {
     cardRefs.current.forEach((card, i) => {
       if (!card) return;
       const offset = getCircularOffset(i, pos, N);
-      const s = getCardStyle(offset);
+      const s = getCardStyle(offset, cardSizeRef.current.width);
       card.style.transform = s.transform || "";
       card.style.opacity = String(s.opacity ?? 1);
       card.style.zIndex = String(s.zIndex ?? 0);
@@ -375,7 +381,7 @@ export function Carousel({ products, onActiveChange, onDemoRequest }) {
       const now = performance.now();
       const dt = Math.max((now - lastTime.current) / 1000, 0.001);
       const dx = e.clientX - lastX.current;
-      const dPos = -(dx / PIXELS_PER_CARD);
+      const dPos = -(dx / getPixelsPerCard(cardSizeRef.current.width));
       positionRef.current += dPos;
       velocityRef.current = Math.min(Math.max(dPos / dt, -3.5), 3.5);
       lastX.current = e.clientX;
@@ -395,7 +401,7 @@ export function Carousel({ products, onActiveChange, onDemoRequest }) {
   return (
     <div
       className="absolute inset-0 flex items-center justify-center cursor-drag-area"
-      style={{ perspective: "1600px", perspectiveOrigin: "50% 50%" }}
+      style={{ perspective: "1600px", perspectiveOrigin: "50% 50%", touchAction: "none" }}
       onPointerDown={onPointerDown}
     >
       <div style={{ position: "relative", width: cardSize.width, height: cardSize.height }}>
