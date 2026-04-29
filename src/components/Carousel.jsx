@@ -1,8 +1,14 @@
 import { useRef, useEffect, useCallback, useState } from "react";
 import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from "framer-motion";
 
-const CARD_W = 440;
-const CARD_H = 580;
+// Responsive card dimensions – will be updated on window resize
+// We'll calculate size based on viewport width
+const getCardSize = () => {
+  const vw = window.innerWidth;
+  if (vw < 600) return { width: 280, height: 380 };
+  if (vw < 900) return { width: 360, height: 470 };
+  return { width: 440, height: 580 };
+};
 const PIXELS_PER_CARD = 700;
 
 function getCircularOffset(index, position, N) {
@@ -81,8 +87,8 @@ function ProductCard({ product, isActive, onDemoRequest }) {
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
       style={{
-        width: CARD_W,
-        height: CARD_H,
+        width: "100%",
+        height: "100%",
         borderRadius: 24,
         overflow: "hidden",
         background: product.cardBg,
@@ -298,6 +304,13 @@ export function Carousel({ products, onActiveChange, onDemoRequest }) {
   const positionRef = useRef(0);
   const velocityRef = useRef(0);
   const isDragging = useRef(false);
+  // responsive card size state
+  const [cardSize, setCardSize] = useState(getCardSize());
+  useEffect(() => {
+    const handleResize = () => setCardSize(getCardSize());
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const lastX = useRef(0);
   const lastTime = useRef(0);
   const cardRefs = useRef([]);
@@ -385,7 +398,7 @@ export function Carousel({ products, onActiveChange, onDemoRequest }) {
       style={{ perspective: "1600px", perspectiveOrigin: "50% 50%" }}
       onPointerDown={onPointerDown}
     >
-      <div style={{ position: "relative", width: CARD_W, height: CARD_H }}>
+      <div style={{ position: "relative", width: cardSize.width, height: cardSize.height }}>
         {products.map((product, i) => (
           <div
             key={i}
